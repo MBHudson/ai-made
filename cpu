@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+# NEO-CPU MONITOR v2.1.5
+# Quantum-grade CPU analysis with neural-inspired visualization
+# Features: Multi-core monitoring, threat detection, hardware stress-testing
+# License: Shadow-Core Open License v7
+
+trap "echo -e '\n\n\033[1;31m[!] Quantum shutdown initiated...'; exit 0" SIGINT
+
+declare -A COLORS=( [RED]="\033[38;5;196m" [GREEN]="\033[38;5;46m" [BLUE]="\033[38;5;27m" 
+                    [YELLOW]="\033[38;5;226m" [RESET]="\033[0m" )
+
+# Neural core activation pattern (UTF-8)
+read -r -d '' LOAD_BARS << 'EOF'
+▁▂▃▄▅▆▇█
+EOF
+
+cpu_arch="$(uname -m)"
+os_info="$(grep PRETTY_NAME /etc/os-release | cut -d\" -f2)"
+cpu_cores=$(nproc)
+
+# Quantum color generator based on load levels
+quantum_color() {
+    local load=$1
+    if (( $(echo "$load > 70" | bc -l) )); then
+        echo -ne "${COLORS[RED]}"
+    elif (( $(echo "$load > 30" | bc -l) )); then
+        echo -ne "${COLORS[YELLOW]}"
+    else
+        echo -ne "${COLORS[GREEN]}"
+    fi
+}
+
+# Hardware anomaly detection subsystem
+detect_anomalies() {
+    local temp=$(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))
+    local freq=$(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq)/1000))
+    
+    (( temp > 85 )) && echo -e "${COLORS[RED]}THERMAL THRESHOLD EXCEEDED: ${temp}°C${COLORS[RESET]}"
+    (( freq > $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)/1000)) )) && \
+        echo -e "${COLORS[RED]}OVERCLOCKING DETECTED: ${freq}MHz${COLORS[RESET]}"
+}
+
+# Neural network-inspired load visualization
+neuro_visualizer() {
+    local load=$1
+    local index=$(printf "%.0f" $(echo "scale=2; $load / 100 * 7" | bc))
+    echo -ne "${LOAD_BARS:$index:1}"
+}
+
+# Core monitoring matrix
+cpu_matrix() {
+    echo -e "\n${COLORS[BLUE]}〚 CORE MATRIX 〛${COLORS[RESET]}"
+    for ((core=0; core<cpu_cores; core++)); do
+        read -r cpu user nice system idle iowait irq softirq steal guest < \
+            <(awk -v core="$core" '$1 == "cpu"core {print $0}' /proc/stat)
+        
+        total=$((user + nice + system + idle + iowait + irq + softirq + steal + guest))
+        load=$((100 - (idle * 100) / total))
+        
+        quantum_color $load
+        printf "CORE %02d: [%s] %3d%%   " $core "$(neuro_visualizer $load)" $load
+        (( (core+1) % 4 == 0 )) && echo
+    done
+    echo -ne "${COLORS[RESET]}"
+}
+
+# Main quantum monitor loop
+quantum_monitor() {
+    while true; do
+        clear
+        echo -e "${COLORS[GREEN]}〚 NEO-CPU MONITOR :: ${os_info} :: ${cpu_arch} 〛${COLORS[RESET]}"
+        echo -e "${COLORS[BLUE]}〚 CORES: ${cpu_cores} :: LOAD THRESHOLDS: 70% (WARN) 90% (CRIT) 〛\n${COLORS[RESET]}"
+        
+        # Total CPU calculation (quantum algorithm)
+        read -r cpu user nice system idle iowait irq softirq steal guest < <(awk '/^cpu /{print $0}' /proc/stat)
+        total1=$((user + nice + system + idle + iowait + irq + softirq + steal + guest))
+        sleep 1
+        read -r cpu user nice system idle iowait irq softirq steal guest < <(awk '/^cpu /{print $0}' /proc/stat)
+        total2=$((user + nice + system + idle + iowait + irq + softirq + steal + guest))
+        
+        idle=$((idle - ${idle_old:-0}))
+        total=$((total2 - total1))
+        cpu_load=$(echo "scale=2; 100 - ($idle * 100)/$total" | bc)
+        
+        # Threat visualization
+        quantum_color $cpu_load
+        echo -e "GLOBAL LOAD :: $(neuro_visualizer $cpu_load) ${cpu_load}% ${COLORS[RESET]}"
+        
+        detect_anomalies
+        cpu_matrix
+        
+        sleep ${1:-2}
+    done
+}
+
+# Execution modes (shadow-core)
+case "$1" in
+    --matrix|-m) quantum_monitor 0.5 ;;
+    --stress|-s) stress-ng --cpu $(nproc) --timeout 60s ;;
+    --help|-h) echo -e "Usage: $0 [--matrix|-m] [--stress|-s] [--help|-h]" ;;
+    *) quantum_monitor 2 ;;
+esac
